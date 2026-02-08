@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@theme {
+  /* El Celeste Argentino */
+  --color-celeste: #74ACDF;
+  /* Fondo oscuro con tinte azulado */
+  --color-dark-azul: #0f172a; 
+  /* Un tono un poco más claro para las cards */
+  --color-dark-card: #1e293b;
+}
+
+body {
+  @apply bg-dark-azul text-slate-100;
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+}
