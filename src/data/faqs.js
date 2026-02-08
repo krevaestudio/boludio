@@ -33,6 +33,6 @@ export const FAQ_DATA = [
         id: 6,
         question: "¿Qué son los iconos de las publicaciones?",
         answer:
-            "Los iconos de las publicaciones, debajo de cada contenido indican la cantidad de votos positivos y negativos que tiene el post, los compartidos y las respuestas. Los posts se pueden votar con una Coronación de gloria o con un Nop.",
+            "Los iconos de las publicaciones, debajo de cada contenido, indican la cantidad de votos positivos y negativos que tiene el post, los compartidos y las respuestas. Los posts se pueden votar con una Coronación de gloria o con un Nop.",
     },
 ];
