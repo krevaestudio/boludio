@@ -1,10 +1,12 @@
 export const validateBoludioPost = (text) => {
   const maxLength = 220;
-  const lowerText = text.toLowerCase();
+  // Usamos el texto original para el largo, pero para el check de "argento" 
+  // le quitamos los saltos de línea para que la regex no se maree
+  const cleanText = text.replace(/\n/g, ' ').toLowerCase();
 
-  // Expresión regular para buscar "boludo" o "boluda"
-  // incluso si le ponen espacios o puntos (ej: b.o.l.u.d.o)
-  const isArgento = /b[o0.]l[u-][d|ð][o0a]/i.test(lowerText);
+  // Regex mejorada: acepta boludo, boluda, bolude, boludx, boluds y sus variantes con puntos/ceros
+  // El final [o0aexs] cubre casi todas las variantes inclusivas
+  const isArgento = /b[o0.]l[u.][d|ð][o0aexs]/i.test(cleanText);
 
   if (text.trim().length === 0) {
     return {
