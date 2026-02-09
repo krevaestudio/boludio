@@ -72,6 +72,7 @@ export default function Composer({ onPostCreated }) {
             </div>
 
             <textarea
+            id="main-composer"
                 className="w-full h-28 p-4 text-lg bg-transparent text-white border-none focus:ring-0 resize-none placeholder-slate-500 outline-none"
                 placeholder={profile ? `¿Qué onda, ${profile.full_name}?` : "¿Qué onda, boludo?"}
                 value={content}

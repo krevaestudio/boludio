@@ -11,18 +11,20 @@ function App() {
     <div className="min-h-screen bg-dark-azul flex flex-col items-center selection:bg-celeste selection:text-dark-azul">
       
       {/* SECCIÓN DE RUTAS DINÁMICAS */}
-      <div className="flex-1 w-full flex justify-center">
+      {/* Agregamos px-4 en mobile para que el contenido no pegue a los bordes del celu */}
+      <div className="flex-1 w-full flex justify-center px-0 sm:px-4">
         <Routes>
-  <Route path="/" element={<Home />} />
-  <Route path="/faqs" element={<FAQs />} />
-  <Route path="/u/:username" element={<UserProfile />} />
-  <Route path="/login" element={<Login />} />
-  <Route path="/register" element={<Register />} />
-</Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/faqs" element={<FAQs />} />
+          <Route path="/u/:username" element={<UserProfile />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+        </Routes>
       </div>
 
-      {/* FOOTER GLOBAL AL 100% */}
-      <div className="w-full border-t border-slate-800 bg-dark-azul">
+      {/* FOOTER GLOBAL */}
+      {/* Lo ocultamos en pantallas muy chicas para que no moleste la lectura */}
+      <div className="hidden sm:block w-full border-t border-slate-800 bg-dark-azul">
         <Footer />
       </div>
       

@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom'; // <--- AGREGAR ESTO
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import homeIcon from '../../assets/icons/home.svg';
@@ -21,73 +21,103 @@ const menuItems = [
 
 export default function Sidebar() {
     const { profile, loading } = useAuth();
+    const navigate = useNavigate(); // Inicializar el hook
+    const location = useLocation(); // Inicializar el hook
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
         window.location.href = "/login";
     };
 
+    const handleCreatePost = () => {
+        if (location.pathname !== '/') {
+            navigate('/');
+            setTimeout(() => {
+                const composer = document.getElementById('main-composer');
+                composer?.focus();
+            }, 100);
+        } else {
+            const composer = document.getElementById('main-composer');
+            composer?.focus();
+            composer?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    };
+
     return (
-        <aside className="w-64 h-screen sticky top-0 flex flex-col border-r border-slate-800 p-4 bg-dark-azul">
+        <aside className="w-20 sm:w-64 h-screen sticky top-0 flex flex-col border-r border-slate-800 p-2 sm:p-4 bg-dark-azul transition-all">
             <nav className="space-y-2 flex-1">
-                {menuItems.map((item) => (
-                    <Link 
-                        to={item.path}
-                        key={item.name}
-                        className="flex items-center gap-4 px-4 py-3 rounded-full hover:bg-slate-800/50 cursor-pointer transition-all group"
-                    >
-                        <img 
-                            src={item.icon} 
-                            alt={item.name} 
-                            className="w-6 h-6 opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all"
-                        />
-                        <span className="text-lg font-medium text-slate-300 group-hover:text-white">
-                            {item.name}
-                        </span>
-                    </Link>
-                ))}
+                {menuItems.map((item) => {
+                    if (item.name === 'Crear post') {
+                        return (
+                            <button 
+                                key={item.name}
+                                onClick={handleCreatePost}
+                                className="w-full flex items-center justify-center sm:justify-start gap-4 px-4 py-3 rounded-full hover:bg-slate-800/50 cursor-pointer transition-all group"
+                                title={item.name}
+                            >
+                                <img 
+                                    src={item.icon} 
+                                    alt={item.name} 
+                                    className="w-6 h-6 opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all"
+                                />
+                                <span className="hidden sm:block text-lg font-medium text-slate-300 group-hover:text-white">
+                                    {item.name}
+                                </span>
+                            </button>
+                        );
+                    }
+
+                    return (
+                        <Link 
+                            to={item.path}
+                            key={item.name}
+                            className="flex items-center justify-center sm:justify-start gap-4 px-4 py-3 rounded-full hover:bg-slate-800/50 cursor-pointer transition-all group"
+                            title={item.name}
+                        >
+                            <img 
+                                src={item.icon} 
+                                alt={item.name} 
+                                className="w-6 h-6 opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all"
+                            />
+                            <span className="hidden sm:block text-lg font-medium text-slate-300 group-hover:text-white">
+                                {item.name}
+                            </span>
+                        </Link>
+                    );
+                })}
             </nav>
 
             <div className="pt-4 border-t border-slate-800/50">
                 {loading ? (
-                    <div className="p-3 animate-pulse flex items-center gap-3">
+                    <div className="p-3 animate-pulse flex items-center justify-center sm:justify-start gap-3">
                         <div className="w-11 h-11 bg-slate-800 rounded-full"></div>
-                        <div className="h-3 w-20 bg-slate-800 rounded"></div>
+                        <div className="hidden sm:block h-3 w-20 bg-slate-800 rounded"></div>
                     </div>
                 ) : profile ? (
                     <div className="space-y-3">
                         <Link 
                             to={`/u/${profile.username}`}
-                            className="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-800/50 cursor-pointer transition-all border border-transparent hover:border-slate-700/50 group"
+                            className="flex items-center justify-center sm:justify-start gap-3 p-2 sm:p-3 rounded-2xl hover:bg-slate-800/50 cursor-pointer transition-all border border-transparent hover:border-slate-700/50 group"
                         >
-                            <div className="relative flex-shrink-0">
-                                <img 
-                                    src={profile.avatar_url || "/avatar-default.png"} 
-                                    className="w-11 h-11 aspect-square rounded-full object-cover shadow-lg border-2 border-celeste"
-                                    style={{ minWidth: '2.75rem', minHeight: '2.75rem' }}
-                                />
-                            </div>
-                            <div className="flex flex-col min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-sm font-bold text-white truncate">{profile.full_name}</span>
-                                    <span className="text-[9px] bg-celeste/20 text-celeste px-1.5 py-0.5 rounded border border-celeste/30 font-black uppercase tracking-tighter">
-                                        {profile.flair}
-                                    </span>
-                                </div>
+                            <img 
+                                src={profile.avatar_url || "/avatar-default.png"} 
+                                className="w-11 h-11 aspect-square rounded-full object-cover shadow-lg border-2 border-celeste"
+                            />
+                            <div className="hidden sm:flex flex-col min-w-0">
+                                <span className="text-sm font-bold text-white truncate">{profile.full_name}</span>
                                 <span className="text-xs text-celeste font-mono font-bold">&{profile.username}</span>
                             </div>
                         </Link>
-                        <button onClick={handleLogout} className="w-full text-[10px] text-slate-600 hover:text-red-400 font-black uppercase tracking-widest py-2">
-                            Cerrar Sesión
+                        <button onClick={handleLogout} className="w-full text-center text-[10px] text-slate-600 hover:text-red-400 font-black uppercase tracking-widest py-2">
+                            <span className="hidden sm:inline">Cerrar Sesión</span>
+                            <span className="sm:hidden text-lg">✕</span>
                         </button>
                     </div>
                 ) : (
-                    <div className="space-y-2 p-2 text-center">
+                    <div className="space-y-2 p-1 sm:p-2 text-center">
                         <Link to="/login" className="block w-full bg-celeste text-dark-azul font-black py-3 rounded-xl text-xs hover:bg-white transition-all">
-                            INGRESAR
-                        </Link>
-                        <Link to="/register" className="block text-slate-500 font-bold text-[10px] hover:text-white uppercase tracking-widest mt-2">
-                            Crear Cuenta
+                            <span className="hidden sm:inline">INGRESAR</span>
+                            <span className="sm:hidden text-lg">🔑</span>
                         </Link>
                     </div>
                 )}
