@@ -1,15 +1,50 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../hooks/useAuth'; // Traemos tu identidad
+import { useAuth } from '../../hooks/useAuth'; 
 import { validateBoludioPost } from '../../utils/validators';
 
 export default function Composer({ onPostCreated }) {
-    const { profile } = useAuth(); // Obtenemos el perfil real
+    const { profile } = useAuth(); 
     const [content, setContent] = useState('');
     const [imageUrl, setImageUrl] = useState('');
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
     const [showImageInput, setShowImageInput] = useState(false);
+
+    const [suggestions, setSuggestions] = useState([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+
+    const handleInputChange = async (e) => {
+        const value = e.target.value;
+        setContent(value);
+        if (error) setError(null);
+
+        const words = value.split(/\s/);
+        const lastWord = words[words.length - 1];
+
+        if (lastWord.startsWith('&') && lastWord.length > 1) {
+            const query = lastWord.slice(1);
+            
+            const { data } = await supabase
+                .from('profiles')
+                .select('username, full_name, avatar_url')
+                .ilike('username', `${query}%`)
+                .limit(5);
+            
+            setSuggestions(data || []);
+            setShowSuggestions(true);
+        } else {
+            setShowSuggestions(false);
+        }
+    };
+
+    const selectUser = (username) => {
+        const words = content.split(/\s/);
+        words[words.length - 1] = `&${username} `;
+        setContent(words.join(' '));
+        setShowSuggestions(false);
+        document.getElementById('main-composer').focus();
+    };
 
     const handlePost = async () => {
         const validation = validateBoludioPost(content);
@@ -20,7 +55,6 @@ export default function Composer({ onPostCreated }) {
 
         setLoading(true);
 
-        // Lógica de Identidad
         let postData = {
             content: content,
             image_url: imageUrl.trim() === '' ? null : imageUrl,
@@ -29,12 +63,10 @@ export default function Composer({ onPostCreated }) {
         };
 
         if (profile) {
-            // Si hay perfil, usamos la data real
             postData.profile_id = profile.id;
             postData.username = profile.username;
             postData.is_anonymous = false;
         } else {
-            // Si no hay perfil, generamos el boludo random de siempre
             const randomNum = Math.floor(Math.random() * (999999 - 1000 + 1)) + 1000;
             postData.username = `Boludo${randomNum}`;
             postData.is_anonymous = true;
@@ -58,8 +90,9 @@ export default function Composer({ onPostCreated }) {
     };
 
     return (
-        <div className="bg-dark-card border border-slate-700 rounded-xl shadow-2xl max-w-xl mx-auto mt-6 overflow-hidden">
-            {/* Header del Composer con Avatar Real si existe */}
+        /* CAMBIO: Eliminamos overflow-hidden y usamos overflow-visible */
+        <div className="bg-dark-card border border-slate-700 rounded-xl shadow-2xl max-w-xl mx-auto mt-6 overflow-visible relative">
+            
             <div className="flex items-center gap-3 px-4 pt-4">
                 <img 
                     src={profile?.avatar_url || "/avatar-default.png"} 
@@ -71,17 +104,45 @@ export default function Composer({ onPostCreated }) {
                 </span>
             </div>
 
-            <textarea
-            id="main-composer"
-                className="w-full h-28 p-4 text-lg bg-transparent text-white border-none focus:ring-0 resize-none placeholder-slate-500 outline-none"
-                placeholder={profile ? `¿Qué onda, ${profile.full_name}?` : "¿Qué onda, boludo?"}
-                value={content}
-                disabled={loading}
-                onChange={(e) => {
-                    setContent(e.target.value);
-                    if (error) setError(null);
-                }}
-            />
+            <div className="relative">
+                <textarea
+                    id="main-composer"
+                    className="w-full h-28 p-4 text-lg bg-transparent text-white border-none focus:ring-0 resize-none placeholder-slate-500 outline-none"
+                    placeholder={profile ? `¿Qué onda, ${profile.full_name}?` : "¿Qué onda, boludo?"}
+                    value={content}
+                    disabled={loading}
+                    onChange={handleInputChange}
+                />
+
+                {/* --- DROPDOWN DE SUGERENCIAS CORREGIDO --- */}
+                {showSuggestions && suggestions.length > 0 && (
+                    <div 
+                        className="absolute left-4 z-[999] bg-slate-900 border border-slate-700 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.9)] w-64 overflow-hidden animate-in fade-in zoom-in duration-200"
+                        /* CAMBIO: Usamos 'top' para que aparezca debajo de lo que escribes y no tape */
+                        style={{ top: '100%' }} 
+                    >
+                        <div className="p-2 border-b border-slate-800 bg-slate-800/30 text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                            Sugerencias de boludos
+                        </div>
+                        <div className="max-h-48 overflow-y-auto">
+                            {suggestions.map((u) => (
+                                <button 
+                                    key={u.username}
+                                    type="button"
+                                    onClick={() => selectUser(u.username)}
+                                    className="w-full flex items-center gap-3 p-3 hover:bg-celeste/10 transition-colors text-left border-b border-slate-800/50 last:border-0"
+                                >
+                                    <img src={u.avatar_url || "/avatar-default.png"} className="w-8 h-8 rounded-full border border-slate-700 object-cover" />
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="text-xs font-bold text-white truncate">{u.full_name}</span>
+                                        <span className="text-[10px] text-celeste font-mono font-bold">&{u.username}</span>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
             
             {showImageInput && (
                 <div className="p-4 border-t border-slate-800 bg-slate-900/50">

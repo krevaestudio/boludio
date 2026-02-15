@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import replyIcon from '../../assets/icons/replies.svg';
@@ -6,12 +7,15 @@ import solIcon from '../../assets/icons/solcitos.svg';
 import shareIcon from '../../assets/icons/shares.svg';
 import nopIcon from '../../assets/icons/nop.svg';
 
-export default function PostCard({ post }) {
+// Agregamos onDelete como prop para actualizar el feed en vivo
+export default function PostCard({ post, onDelete }) {
     const { profile } = useAuth();
     const [hasSolcito, setHasSolcito] = useState(false);
     
-    // 1. Estado inicial limpio. Usamos una función para que solo se ejecute al montar.
     const [solcitosCount, setSolcitosCount] = useState(() => Math.max(0, Number(post.solcitos) || 0));
+
+    // Verificamos si el boludo que mira el post es el autor
+    const isOwner = profile && profile.id === post.profile_id;
 
     const isAnon = post.is_anonymous || !post.profiles;
     const userProfile = post.profiles || {};
@@ -19,7 +23,48 @@ export default function PostCard({ post }) {
     const displayFlair = isAnon ? "Fantasma" : (userProfile.flair || "User");
     const displayName = isAnon ? post.username : (userProfile.full_name || post.username);
 
-    // 2. Solo sincronizamos si el ID del post cambia (para cuando se recarga la lista completa)
+    // FUNCIÓN PARA ELIMINAR EL POST
+    const handleDelete = async () => {
+        const confirmDelete = window.confirm("¿Estás seguro de que querés borrar esta boludez? No hay vuelta atrás.");
+        if (!confirmDelete) return;
+
+        try {
+            const { error } = await supabase
+                .from('posts')
+                .delete()
+                .eq('id', post.id);
+
+            if (error) throw error;
+            
+            // Si el feed nos pasó la función, la ejecutamos para que desaparezca la card
+            if (onDelete) onDelete(post.id);
+        } catch (error) {
+            alert("No se pudo borrar, se rompió algo: " + error.message);
+        }
+    };
+
+    const renderContent = (text) => {
+        if (!text) return null;
+        const mentionRegex = /(&[a-zA-Z0-9_]+)/g;
+        const parts = text.split(mentionRegex);
+
+        return parts.map((part, i) => {
+            if (part.startsWith('&')) {
+                const username = part.slice(1);
+                return (
+                    <Link 
+                        key={i} 
+                        to={`/u/${username}`} 
+                        className="text-celeste font-bold hover:underline decoration-celeste/30 transition-all"
+                    >
+                        {part}
+                    </Link>
+                );
+            }
+            return part;
+        });
+    };
+
     useEffect(() => {
         setSolcitosCount(Math.max(0, Number(post.solcitos) || 0));
     }, [post.id]);
@@ -35,7 +80,7 @@ export default function PostCard({ post }) {
                     .maybeSingle();
                 
                 if (data) setHasSolcito(true);
-                else setHasSolcito(false); // Reset por si cambias de usuario
+                else setHasSolcito(false);
             };
             checkIfVoted();
         }
@@ -43,31 +88,18 @@ export default function PostCard({ post }) {
 
     const handleSolcito = async () => {
         if (!profile) return alert("¡Tenés que estar logueado para tirar solcitos, boludo!");
-
         const previousState = hasSolcito;
         const previousCount = solcitosCount;
-
-        // --- LÓGICA OPTIMISTA ---
         setHasSolcito(!previousState);
         setSolcitosCount(prev => previousState ? Math.max(0, prev - 1) : prev + 1);
 
         try {
             if (previousState) {
-                const { error } = await supabase
-                    .from('solcitos')
-                    .delete()
-                    .eq('post_id', post.id)
-                    .eq('profile_id', profile.id);
-                if (error) throw error;
+                await supabase.from('solcitos').delete().eq('post_id', post.id).eq('profile_id', profile.id);
             } else {
-                const { error } = await supabase
-                    .from('solcitos')
-                    .insert({ post_id: post.id, profile_id: profile.id });
-                if (error) throw error;
+                await supabase.from('solcitos').insert({ post_id: post.id, profile_id: profile.id });
             }
         } catch (error) {
-            console.error("Error al votar:", error.message);
-            // Revertimos solo si falla la DB
             setHasSolcito(previousState);
             setSolcitosCount(previousCount);
         }
@@ -98,14 +130,30 @@ export default function PostCard({ post }) {
                         <span className={`text-[10px] px-2 py-0.5 rounded border font-black uppercase tracking-tighter shrink-0 ${isAnon ? 'bg-white/5 text-slate-500 border-white/10' : 'bg-celeste/10 text-celeste border-celeste/20'}`}>
                             {displayFlair}
                         </span>
-                        <span className="text-slate-600 font-mono text-[10px] truncate italic">@{post.username}</span>
-                        <span className="text-slate-500 text-[10px] ml-auto">
-                            {new Date(post.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                        <span className="text-slate-600 font-mono text-[10px] truncate italic">&{post.username}</span>
+                        
+                        {/* HORA Y BOTÓN DE BORRAR */}
+                        <div className="ml-auto flex items-center gap-3">
+                            <span className="text-slate-500 text-[10px]">
+                                {new Date(post.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            
+                            {isOwner && (
+                                <button 
+                                    onClick={handleDelete}
+                                    className="p-1.5 text-slate-600 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                                    title="Borrar boludez"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     <p className="text-slate-200 mt-2 leading-relaxed break-words text-sm sm:text-base whitespace-pre-wrap">
-                        {post.content}
+                        {renderContent(post.content)}
                     </p>
 
                     {videoId ? (
@@ -135,14 +183,8 @@ export default function PostCard({ post }) {
                                 onClick={handleSolcito}
                                 className={`flex items-center gap-2 transition-all group px-2 py-1 rounded-lg hover:bg-yellow-400/5 ${hasSolcito ? 'text-yellow-400 opacity-100' : 'text-slate-500 opacity-60 hover:opacity-100'}`}
                             >
-                                <img 
-                                    src={solIcon} 
-                                    className={`w-4 h-4 transition-transform duration-200 ${hasSolcito ? 'scale-125' : 'group-active:scale-90'}`} 
-                                    alt="Sol" 
-                                />
-                                <span className={`text-[10px] font-black font-mono`}>
-                                    {solcitosCount}
-                                </span>
+                                <img src={solIcon} className={`w-4 h-4 transition-transform duration-200 ${hasSolcito ? 'scale-125' : 'group-active:scale-90'}`} alt="Sol" />
+                                <span className="text-[10px] font-black font-mono">{solcitosCount}</span>
                             </button>
 
                             <button className="flex items-center gap-2 hover:text-red-500 transition-all group">
